@@ -5,7 +5,7 @@ import java.util.Calendar
 import com.sun.net.httpserver.HttpServer
 import com.twitter.common.quantity.{Time, Amount}
 import com.twitter.common.zookeeper.{ServerSetImpl, ZooKeeperClient}
-import com.twitter.finagle.{Resolver, SimpleFilter, Service, Http}
+import com.twitter.finagle.{SimpleFilter, Service, Http}
 import com.twitter.finagle.builder.ServerBuilder
 import com.twitter.finagle.zipkin.thrift.ZipkinTracer
 import com.twitter.finagle.zookeeper.ZookeeperServerSetCluster
@@ -24,23 +24,7 @@ import com.twitter.util.{Await, Future}
 import com.twitter.finagle.tracing.Trace
 import org.jboss.netty.util.CharsetUtil
 
-/**
- * Created by kenny.lee on 2014/11/14.
- */
-// VM Option with zipkin
-// -Dcom.twitter.finagle.zipkin.host=192.168.1.9:9410 -Dcom.twitter.finagle.zipkin.initialSampleRate=1.0
-
-class Respond extends Service[HttpRequest, HttpResponse] {
-  def apply(request: HttpRequest) = {
-    val response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, OK)
-    response.setContent(copiedBuffer("hello world", Utf8))
-    Stats.incr("widgets_sold", 5)
-    Future.value(response)
-  }
-}
-
-
-object Server {
+object Server2 {
   def main(args: Array[String]): Unit = {
  //   val zipkinTracer = ZipkinTracer.mk(host = "192.168.1.104", port = 9410, sampleRate = 1.0f)
   //  val respond = new Respond
@@ -55,24 +39,16 @@ object Server {
       ))
     )(runtime)
 
-    val dest = Resolver.eval("zk!172.17.0.5:2181!/finagles2")
-    val client: Service[HttpRequest, HttpResponse] =
-      com.twitter.finagle.Http.newService(dest, "Finagleserverclient")
-    val request =  new DefaultHttpRequest(
-      HttpVersion.HTTP_1_1, HttpMethod.GET, "/exitserver")
-
     val service = new Service[HttpRequest, HttpResponse] {
       def apply(req: HttpRequest): Future[HttpResponse] = {
-        println(1)
-        val s2 = Await.result(client(request))
-        println(2)
         val response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, OK)
-        response.setContent(copiedBuffer("hello world" + s2.getContent.toString(Utf8), Utf8))
+        response.setContent(copiedBuffer("hello world", Utf8))
         Stats.incr("widgets_sold", 5)
-        println(4)
+
         val today = Calendar.getInstance().getTime()
         val nowtime = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
         val currentTimeStr = nowtime.format(today)
+
         println(currentTimeStr + " URL : " + req.getUri())
         if (req.getUri() == "/exit") {
           System.exit(0)
@@ -87,10 +63,10 @@ object Server {
   //  Trace.record("11")
 
    // Trace.recordServiceName("kenny")
-    val server = Http.serve("FinagleServer=:9001", new MyFilter andThen service)
+    val server = Http.serve("FinagleServer2=:9005", new MyFilter andThen service)
     //service.announce("zk!zkhost.com:2181!/path/to/my/serverset!shardId")
     //server.announce("zk!localhost:2181!/finagle!0")
-    server.announce("zk!172.17.0.5:2181!/finagle!0")
+    server.announce("zk!172.17.0.5:2181!/finagles2!0")
     // Trace.pushTracer(zipkinTracer)
     Await.ready(server)
     server.close()
@@ -130,13 +106,3 @@ object Server {
 }
 }
 
-class MyFilter[Req, Rep](statsReceiver: StatsReceiver = NullStatsReceiver)
-  extends SimpleFilter[Req, Rep]
-{
-  private[this] val filterCounter = statsReceiver.counter("no_client_id_specified")
-
-  def apply(req: Req, service: Service[Req, Rep]) = {
-    println("filtering........" + req.toString)
-    service(req)
-  }
-}

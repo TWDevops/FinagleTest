@@ -1,11 +1,13 @@
 import com.twitter.finagle.http.Http
 import com.twitter.finagle.zipkin.thrift.ZipkinTracer
-import com.twitter.finagle.{Resolver, Service}
+import com.twitter.finagle._
 import com.twitter.util.{Await, Future}
 import org.jboss.netty.handler.codec.http._
 import org.jboss.netty.util.CharsetUtil
 import com.twitter.finagle.tracing.{ConsoleTracer, Trace}
-import com.twitter.finagle.http
+import com.twitter.finagle.MemcachedClient
+import org.jboss.netty.buffer.ChannelBuffers
+import com.twitter.io.Charsets
 
 /**
  * Created by kenny.lee on 2014/11/17.
@@ -16,10 +18,13 @@ import com.twitter.finagle.http
 
 object Client {
   def main(args: Array[String]): Unit = {
+
     //val dest = Resolver.eval("zk!localhost:2181!/finagle")
     //val dest = Resolver.eval("zk!54.65.124.82:2181!/finagle")
-    val dest = Resolver.eval("inet!127.0.0.1:3006")
-
+    //val dest = Resolver.eval("inet!172.19.9.43:8080")
+    //val dest = Resolver.eval("zk!172.17.0.5:2181!/finagles2")
+    val dest = Resolver.eval("zk!172.17.0.5:2181!/finagle")
+    //val dest = Resolver.eval("inet!127.0.0.1:9001")
       val client: Service[HttpRequest, HttpResponse] =
          com.twitter.finagle.Http.newService(dest, "FinagleClient")
 
@@ -40,9 +45,8 @@ object Client {
           println("failed with " + cause)
         }
         Await.ready(response)
-        Thread.sleep(1000)
+        Thread.sleep(500)
       }
-
-      client.close()
+    client.close()
   }
 }
